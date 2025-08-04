@@ -1,5 +1,6 @@
-# Market Basket Analysis
-
+#(video)
+![Visual Analysis](Market-Basket-Analysis/assets/ThesisVideo.mp4)
+#Market Basket Analysis
 ![Visual Analysis](Market-Basket-Analysis/assets/visual.png)
 ![Recommendations](Market-Basket-Analysis/assets/recommend.png)
 ![Market Basket Analysis](Market-Basket-Analysis/assets/mba.png)
