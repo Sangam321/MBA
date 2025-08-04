@@ -23,9 +23,8 @@ class FPGrowthAnalyzer:
             raise Exception(f"Error processing file: {str(e)}")
     
     def find_frequent_patterns(self, transactions):
-        """Find frequent itemsets using FP-Growth"""
+        "Find frequent itemsets using FP-Growth"
         try:
-            # Convert min_support to absolute count
             min_support_count = int(self.min_support * len(transactions))
             patterns = pyfpgrowth.find_frequent_patterns(transactions, min_support_count)
             return patterns
@@ -36,8 +35,7 @@ class FPGrowthAnalyzer:
         """Generate association rules from frequent itemsets"""
         try:
             rules = pyfpgrowth.generate_association_rules(patterns, self.min_confidence)
-            
-            # Format rules for better readability
+           
             formatted_rules = []
             for antecedent, (consequent, confidence) in rules.items():
                 formatted_rules.append({
@@ -59,14 +57,12 @@ class FPGrowthAnalyzer:
         
         patterns = self.find_frequent_patterns(transactions)
         rules = self.generate_rules(patterns, transactions)
-        
-        # Get item frequencies
+  
         item_frequencies = defaultdict(int)
         for transaction in transactions:
             for item in transaction:
                 item_frequencies[item] += 1
-        
-        # Convert to list of dicts sorted by frequency
+       
         sorted_items = sorted(item_frequencies.items(), key=lambda x: x[1], reverse=True)
         frequency_data = [{"item": item, "frequency": count} for item, count in sorted_items]
         

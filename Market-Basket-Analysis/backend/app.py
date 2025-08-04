@@ -1,102 +1,145 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from pymongo import MongoClient
-from bson import ObjectId
-from datetime import datetime
-from fp_growth import FPGrowthAnalyzer
-from utils import save_uploaded_file
-import json
-import os
-from config import Config
+import pandas as pd
+import numpy as np
+from mlxtend.frequent_patterns import fpgrowth, association_rules
+from mlxtend.preprocessing import TransactionEncoder
+import io
+import csv
+from collections import Counter
+import datetime
+from db import analysis_collection  
 
 app = Flask(__name__)
 CORS(app)
-app.config.from_object(Config)
-Config.init_app(app)
+def preprocess_data(file_content):
+    """
+    Preprocess the CSV file content to extract transactions
+    """
+    csv_reader = csv.reader(io.StringIO(file_content))
+    transactions = []
+    for row in csv_reader:
+        transaction = [item.strip() for item in row if item.strip()]
+        if transaction:
+            transactions.append(transaction)
+    return transactions
+
+def create_basket_matrix(transactions):
+    """
+    Create a binary matrix representation of transactions
+    """
+    te = TransactionEncoder()
+    te_ary = te.fit(transactions).transform(transactions)
+    df = pd.DataFrame(te_ary, columns=te.columns_)
+    return df
+def perform_market_basket_analysis(df, min_support=0.01, min_confidence=0.1):
+    """
+    Perform market basket analysis using FP-Growth algorithm
+    """
+    try:
+        frequent_itemsets = fpgrowth(df, min_support=min_support, use_colnames=True)
+
+        if frequent_itemsets.empty:
+            frequent_itemsets = fpgrowth(df, min_support=0.005, use_colnames=True)
+
+        if not frequent_itemsets.empty and len(frequent_itemsets) > 1:
+            rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1.0)
+            if rules.empty:
+                rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence)
+        else:
+            rules = pd.DataFrame()
+
+        return frequent_itemsets, rules
+
+    except Exception as e:
+        print(f"Error in analysis: {e}")
+        return pd.DataFrame(), pd.DataFrame()
 
 
-client = MongoClient(Config.MONGO_URI)
-db = client.get_database()
-
-class JSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, ObjectId):
-            return str(o)
-        return json.JSONEncoder.default(self, o)
-
-app.json_encoder = JSONEncoder
-
-@app.route("/api/upload", methods=["POST"])
-def upload_file():
-    if "file" not in request.files:
-        return jsonify({"error": "No file part"}), 400
-    
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"error": "No selected file"}), 400
-    
+@app.route('/analyze', methods=['POST'])
+def analyze_basket():
+    """
+    Main endpoint for market basket analysis
+    """
     try:
 
-        file_path = save_uploaded_file(file)
-        if not file_path:
-            return jsonify({"error": "Invalid file type"}), 400
-        
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
 
-        min_support = float(request.form.get("min_support", 0.1))
-        min_confidence = float(request.form.get("min_confidence", 0.5))
-        
-     
-        analyzer = FPGrowthAnalyzer(min_support=min_support, min_confidence=min_confidence)
-        result = analyzer.analyze(file_path)
-        
+        file = request.files['file']
+
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
   
-        analysis_data = {
-            "filename": file.filename,
-            "upload_date": datetime.utcnow(),
-            "parameters": {
-                "min_support": min_support,
-                "min_confidence": min_confidence
-            },
-            "results": result
+        file_content = file.read().decode('utf-8')
+
+        transactions = preprocess_data(file_content)
+        if not transactions:
+            return jsonify({'error': 'No valid transactions found in file'}), 400
+
+   
+        basket_df = create_basket_matrix(transactions)
+
+        frequent_itemsets, rules = perform_market_basket_analysis(basket_df)
+
+        all_items = []
+        for transaction in transactions:
+            all_items.extend(transaction)
+        item_frequency = dict(Counter(all_items))
+
+        response_data = {
+            'total_transactions': len(transactions),
+            'item_frequency': item_frequency,
+            'frequent_itemsets': [],
+            'association_rules': []
         }
-        
-        analysis_id = db.analyses.insert_one(analysis_data).inserted_id
-        
-        return jsonify({
-            "message": "File uploaded and analyzed successfully",
-            "analysis_id": str(analysis_id),
-            "results": result
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        if not frequent_itemsets.empty:
+            for _, itemset in frequent_itemsets.iterrows():
+                response_data['frequent_itemsets'].append({
+                    'itemset': list(itemset['itemsets']),
+                    'support': float(itemset['support'])
+                })
 
-@app.route("/api/analyses", methods=["GET"])
-def get_analyses():
-    try:
-        analyses = list(db.analyses.find().sort("upload_date", -1))
-        return jsonify(analyses)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        if not rules.empty:
+            for _, rule in rules.iterrows():
+                response_data['association_rules'].append({
+                    'antecedents': list(rule['antecedents']),
+                    'consequents': list(rule['consequents']),
+                    'support': float(rule['support']),
+                    'confidence': float(rule['confidence']),
+                    'lift': float(rule['lift'])
+                })
 
-@app.route("/api/analyses/<analysis_id>", methods=["GET"])
-def get_analysis(analysis_id):
-    try:
-        analysis = db.analyses.find_one({"_id": ObjectId(analysis_id)})
-        if not analysis:
-            return jsonify({"error": "Analysis not found"}), 404
-        return jsonify(analysis)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        try:
+            analysis_collection.insert_one({
+                "timestamp": datetime.datetime.utcnow(),
+                "csv_filename": file.filename,
+                "csv_data": file_content, 
+                "total_transactions": len(transactions),
+                "item_frequency": item_frequency,
+                "frequent_itemsets": response_data['frequent_itemsets'],
+                "association_rules": response_data['association_rules']
+            })
+            print(f"Analysis stored in MongoDB for file: {file.filename}")
+        except Exception as db_err:
+            print(f"Error saving to MongoDB: {db_err}")
 
-@app.route("/api/analyses/<analysis_id>", methods=["DELETE"])
-def delete_analysis(analysis_id):
-    try:
-        result = db.analyses.delete_one({"_id": ObjectId(analysis_id)})
-        if result.deleted_count == 0:
-            return jsonify({"error": "Analysis not found"}), 404
-        return jsonify({"message": "Analysis deleted successfully"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify(response_data)
 
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    except Exception as e:
+        print(f"Error processing request: {e}")
+        return jsonify({'error': f'Error processing file: {str(e)}'}), 500
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """
+    Health check endpoint
+    """
+    return jsonify({'status': 'healthy', 'message': 'Market Basket Analysis API is running'})
+
+
+if __name__ == '__main__':
+    print("Starting Market Basket Analysis API...")
+    print("Make sure you have installed: flask flask-cors pandas mlxtend numpy pymongo")
+    app.run(debug=True, host='0.0.0.0', port=5000)
