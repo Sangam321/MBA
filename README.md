@@ -1,3 +1,9 @@
+# Market Basket Analysis
+
 ![Visual Analysis](Market-Basket-Analysis/assets/visual.png)
-![Recommendations](Market-Basket-Analysisassets/recommend.png)
-![Market Basket Analysis](Market-Basket-Analysisassets/mba.png)
+![Recommendations](Market-Basket-Analysis/assets/recommend.png)
+![Market Basket Analysis](Market-Basket-Analysis/assets/mba.png)
+![Market Basket Analysis](Market-Basket-Analysis/assets/1.png)
+![Market Basket Analysis](Market-Basket-Analysis/assets/2.png)
+![Market Basket Analysis](Market-Basket-Analysis/assets/3.png)
+![Market Basket Analysis](Market-Basket-Analysis/assets/4.png)
