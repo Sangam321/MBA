@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import Visualizations from '@/components/Visualizations';
-import { BarChart3, Layers3, Lightbulb, Map, PackagePlus, TrendingUp, Upload } from 'lucide-react';
+import { ArrowLeft, BarChart3, Layers3, Lightbulb, Map, PackagePlus, TrendingUp, Upload } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 interface Rule {
@@ -38,7 +38,7 @@ function topNByValue<T extends Record<string, number>>(obj: T, n: number) {
     .slice(0, n);
 }
 
-const Recommendations = ({ data }: { data: AnalysisData }) => {
+const Recommendations = ({ data, onBack }: { data: AnalysisData, onBack: () => void }) => {
 
   const { topItem, top5, totalUnits } = useMemo(() => {
     const entries = Object.entries(data.item_frequency);
@@ -123,154 +123,229 @@ const Recommendations = ({ data }: { data: AnalysisData }) => {
   }, [top5, topItem, totalUnits]);
 
   return (
-    <div className="space-y-6 font-sans">
-      <Card className="font-sans">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl font-bold">
-            <Lightbulb className="h-5 w-5 mr-2 text-yellow-500" />
-            Key Findings
-          </CardTitle>
-          <CardDescription className="font-sans">Top sellers and quick wins from your data</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {topItem ? (
-            <div className="rounded-lg border p-4">
-              <div className="text-sm text-muted-foreground font-light">Highest-selling product</div>
-              <div className="text-xl font-semibold">{titleCase(topItem.name)}</div>
-              <div className="text-sm font-sans">
-                Units: <strong className="font-medium">{topItem.units.toLocaleString()}</strong> • Share of units:{' '}
-                <strong className="font-medium">{pct(topItem.units / Math.max(totalUnits, 1), 2)}</strong>
-              </div>
-              <div className="mt-2 text-sm font-light">
-                Recommendation: Keep <strong className="font-medium">{titleCase(topItem.name)}</strong> at eye level and in high-traffic zones.
-                Use it as an anchor to promote complementary items from the rules below.
-              </div>
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground font-light">No item frequency found.</div>
-          )}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Back Button */}
+        <button
+          onClick={onBack}
+          className="flex items-center text-sm font-medium text-[#4169E1] hover:text-[#3a5bc7] transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to upload
+        </button>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-lg border p-4">
-              <div className="flex items-center mb-2">
-                <PackagePlus className="h-4 w-4 mr-2" />
-                <span className="font-semibold">Top 5 Selling Products</span>
-              </div>
-              <ol className="list-decimal ml-5 text-sm space-y-1 font-light">
-                {top5.map(([name, units]) => (
-                  <li key={name}>
-                    <span className="font-medium">{titleCase(name)}</span> — <span className="text-muted-foreground">{units.toLocaleString()} units</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
+        {/* Header Section */}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-semibold text-slate-800 mb-3">Actionable Recommendations</h1>
+          <p className="text-lg text-slate-600">Store optimization strategies based on your market basket analysis</p>
+        </div>
 
-            <div className="rounded-lg border p-4">
-              <div className="flex items-center mb-2">
-                <Layers3 className="h-4 w-4 mr-2" />
-                <span className="font-semibold">Quick Wins</span>
+        <div className="space-y-8">
+          {/* Key Findings Card */}
+          <Card className="bg-white shadow-lg border-0 hover:shadow-xl transition-all duration-200">
+            <CardHeader className="pb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-[#4169E1] bg-opacity-10 flex items-center justify-center">
+                  <Lightbulb className="h-5 w-5 text-[#4169E1]" />
+                </div>
+                <CardTitle className="text-2xl font-semibold text-slate-800">Key Findings</CardTitle>
               </div>
-              <ul className="list-disc ml-5 text-sm space-y-1 font-light">
-                <li>Face up top sellers and ensure 0 stockouts during peak hours.</li>
-                <li>Co-locate high-lift consequents next to anchors (see below).</li>
-                <li>Promote bundles as "Buy Together & Save" or recipe kits.</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl font-bold">
-            <Map className="h-5 w-5 mr-2 text-primary" />
-            Co-Location & Cross-Sell (from Association Rules)
-          </CardTitle>
-          <CardDescription className="font-sans">Turn high-lift rules into shelf adjacency</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {coLocationSentences.length ? (
-            <ul className="list-disc ml-5 text-sm font-light">{coLocationSentences}</ul>
-          ) : (
-            <div className="text-sm text-muted-foreground font-light">No strong rules found to suggest co-location.</div>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl font-bold">
-            <TrendingUp className="h-5 w-5 mr-2 text-emerald-600" />
-            Bundle & Themed Displays
-          </CardTitle>
-          <CardDescription className="font-sans">Convert patterns into shoppable ideas</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {bundleSuggestions.length ? (
-            <ul className="list-disc ml-5 text-sm space-y-1 font-light">
-              {bundleSuggestions.map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
-          ) : (
-            <div className="text-sm text-muted-foreground font-light">No bundle suggestions available.</div>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl font-bold">
-            <Lightbulb className="h-5 w-5 mr-2 text-yellow-500" />
-            Store-Wide Placement Strategies
-          </CardTitle>
-          <CardDescription className="font-sans">Best practices informed by your data</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc ml-5 text-sm space-y-1 font-light">
-            {layoutHeuristics.map((t, i) => (
-              <li key={i}>{t}</li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+              <CardDescription className="text-base text-slate-600 ml-13">
+                Top sellers and quick wins from your transaction data analysis
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-0">
+              {topItem ? (
+                <div className="rounded-xl border border-slate-200 p-6 bg-gradient-to-r from-slate-50 to-white">
+                  <div className="text-sm text-slate-500 font-medium mb-2">Highest-selling product</div>
+                  <div className="text-2xl font-semibold text-slate-800 mb-3">{titleCase(topItem.name)}</div>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="text-sm">
+                      <span className="text-slate-600">Units:</span>{' '}
+                      <span className="font-semibold text-[#4169E1]">{topItem.units.toLocaleString()}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-slate-600">Share of units:</span>{' '}
+                      <span className="font-semibold text-[#4169E1]">{pct(topItem.units / Math.max(totalUnits, 1), 2)}</span>
+                    </div>
+                  </div>
+                  <div className="text-sm text-slate-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <span className="font-medium text-slate-700">Recommendation:</span> Keep{' '}
+                    <span className="font-semibold text-[#4169E1]">{titleCase(topItem.name)}</span> at eye level and in high-traffic zones.
+                    Use it as an anchor to promote complementary items from the rules below.
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500 p-4 bg-slate-50 rounded-lg">No item frequency found.</div>
+              )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Top Association Rules (by Lift)</CardTitle>
-          <CardDescription className="font-sans">Reference for decisions (Top 10)</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {topRulesByLift.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm font-light">
-                <thead>
-                  <tr className="text-left">
-                    <th className="py-2 pr-3 font-medium">Rule</th>
-                    <th className="py-2 pr-3 font-medium">Support</th>
-                    <th className="py-2 pr-3 font-medium">Confidence</th>
-                    <th className="py-2 font-medium">Lift</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topRulesByLift.map((r, i) => (
-                    <tr key={i} className="border-t">
-                      <td className="py-2 pr-3">
-                        {r.antecedents.join(', ')} → {r.consequents.join(', ')}
-                      </td>
-                      <td className="py-2 pr-3">{pct(r.support, 2)}</td>
-                      <td className="py-2 pr-3">{pct(r.confidence, 2)}</td>
-                      <td className="py-2">{r.lift.toFixed(2)}</td>
-                    </tr>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="rounded-xl border border-slate-200 p-6 bg-white">
+                  <div className="flex items-center mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-[#4169E1] bg-opacity-10 flex items-center justify-center mr-3">
+                      <PackagePlus className="h-4 w-4 text-[#4169E1]" />
+                    </div>
+                    <span className="font-semibold text-slate-800 text-lg">Top 5 Selling Products</span>
+                  </div>
+                  <ol className="list-decimal ml-5 text-sm space-y-2">
+                    {top5.map(([name, units], index) => (
+                      <li key={name} className="flex items-center justify-between py-1">
+                        <span className="font-medium text-slate-700">{titleCase(name)}</span>
+                        <span className="text-slate-500 bg-slate-100 px-2 py-1 rounded text-xs">
+                          {units.toLocaleString()} units
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 p-6 bg-white">
+                  <div className="flex items-center mb-4">
+                    <div className="w-8 h-8 rounded-lg bg-[#4169E1] bg-opacity-10 flex items-center justify-center mr-3">
+                      <Layers3 className="h-4 w-4 text-[#4169E1]" />
+                    </div>
+                    <span className="font-semibold text-slate-800 text-lg">Quick Wins</span>
+                  </div>
+                  <ul className="list-disc ml-5 text-sm space-y-2">
+                    <li>Face up top sellers and ensure 0 stockouts during peak hours.</li>
+                    <li>Co-locate high-lift consequents next to anchors (see below).</li>
+                    <li>Promote bundles as "Buy Together & Save" or recipe kits.</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Co-Location Card */}
+          <Card className="bg-white shadow-lg border-0 hover:shadow-xl transition-all duration-200">
+            <CardHeader className="pb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-[#4169E1] bg-opacity-10 flex items-center justify-center">
+                  <Map className="h-5 w-5 text-[#4169E1]" />
+                </div>
+                <CardTitle className="text-2xl font-semibold text-slate-800">Co-Location & Cross-Sell</CardTitle>
+              </div>
+              <CardDescription className="text-base text-slate-600 ml-13">
+                Turn high-lift association rules into strategic shelf adjacency
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {coLocationSentences.length ? (
+                <ul className="list-disc ml-5 text-sm space-y-2 text-slate-600">
+                  {coLocationSentences}
+                </ul>
+              ) : (
+                <div className="text-sm text-slate-500 p-4 bg-slate-50 rounded-lg">
+                  No strong rules found to suggest co-location.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Bundle & Themed Displays Card */}
+          <Card className="bg-white shadow-lg border-0 hover:shadow-xl transition-all duration-200">
+            <CardHeader className="pb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-[#4169E1] bg-opacity-10 flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-[#4169E1]" />
+                </div>
+                <CardTitle className="text-2xl font-semibold text-slate-800">Bundle & Themed Displays</CardTitle>
+              </div>
+              <CardDescription className="text-base text-slate-600 ml-13">
+                Convert purchase patterns into shoppable themed experiences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {bundleSuggestions.length ? (
+                <ul className="list-disc ml-5 text-sm space-y-2 text-slate-600">
+                  {bundleSuggestions.map((line, i) => (
+                    <li key={i}>{line}</li>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground font-light">No rules to display.</div>
-          )}
-        </CardContent>
-      </Card>
+                </ul>
+              ) : (
+                <div className="text-sm text-slate-500 p-4 bg-slate-50 rounded-lg">
+                  No bundle suggestions available.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Store-Wide Placement Strategies Card */}
+          <Card className="bg-white shadow-lg border-0 hover:shadow-xl transition-all duration-200">
+            <CardHeader className="pb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-[#4169E1] bg-opacity-10 flex items-center justify-center">
+                  <Lightbulb className="h-5 w-5 text-[#4169E1]" />
+                </div>
+                <CardTitle className="text-2xl font-semibold text-slate-800">Store-Wide Placement Strategies</CardTitle>
+              </div>
+              <CardDescription className="text-base text-slate-600 ml-13">
+                Best practices and placement recommendations informed by your data
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <ul className="list-disc ml-5 text-sm space-y-3 text-slate-600">
+                {layoutHeuristics.map((t, i) => (
+                  <li key={i} className="leading-relaxed">{t}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* Top Association Rules Table */}
+          <Card className="bg-white shadow-lg border-0 hover:shadow-xl transition-all duration-200">
+            <CardHeader className="pb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-[#4169E1] bg-opacity-10 flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5 text-[#4169E1]" />
+                </div>
+                <CardTitle className="text-2xl font-semibold text-slate-800">Top Association Rules</CardTitle>
+              </div>
+              <CardDescription className="text-base text-slate-600 ml-13">
+                Reference data for strategic decisions (Top 10 by Lift)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {topRulesByLift.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left border-b-2 border-slate-200">
+                        <th className="py-4 pr-4 font-semibold text-slate-700">Rule</th>
+                        <th className="py-4 pr-4 font-semibold text-slate-700">Support</th>
+                        <th className="py-4 pr-4 font-semibold text-slate-700">Confidence</th>
+                        <th className="py-4 font-semibold text-slate-700">Lift</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topRulesByLift.map((r, i) => (
+                        <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                          <td className="py-4 pr-4 text-slate-800 font-medium">
+                            <span className="text-[#4169E1]">{r.antecedents.join(', ')}</span>
+                            <span className="text-slate-400 mx-2">→</span>
+                            <span className="text-green-600">{r.consequents.join(', ')}</span>
+                          </td>
+                          <td className="py-4 pr-4 text-slate-600">{pct(r.support, 2)}</td>
+                          <td className="py-4 pr-4 text-slate-600">{pct(r.confidence, 2)}</td>
+                          <td className="py-4 text-[#4169E1] font-semibold">{r.lift.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500 p-4 bg-slate-50 rounded-lg">
+                  No rules to display.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
+
 const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
@@ -344,71 +419,132 @@ const Index = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 px-4">
+  const handleBackToUpload = () => {
+    setAnalysisData(null);
+  };
 
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <BarChart3 className="h-12 w-12 text-primary mr-3" />
-            <h1 className="text-4xl font-bold">Market Basket Analysis</h1>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="container mx-auto py-12 px-6">
+        {/* Main Header */}
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-[#4169E1] bg-opacity-10 flex items-center justify-center mr-4">
+              <BarChart3 className="h-8 w-8 text-[#4169E1]" />
+            </div>
+            <h1 className="text-4xl font-semibold text-slate-800">Market Basket Analysis</h1>
           </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto font-light">
+          <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
             Discover hidden patterns in customer purchase behavior using the FP-Growth algorithm.
             Upload your transaction data to get insights, visualizations, and store-ready recommendations.
           </p>
         </div>
+
         {!analysisData ? (
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-4xl mx-auto space-y-8">
             <FileUpload onFileUpload={handleFileUpload} isLoading={isLoading} />
-            <Card className="mt-8">
-              <CardHeader>
-                <CardTitle className="flex items-center font-bold">
-                  <TrendingUp className="h-5 w-5 mr-2" />
-                  How It Works
-                </CardTitle>
+
+            {/* How It Works Card */}
+            <Card className="bg-white shadow-lg border-0">
+              <CardHeader className="pb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-[#4169E1] bg-opacity-10 flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-[#4169E1]" />
+                  </div>
+                  <CardTitle className="text-2xl font-semibold text-slate-800">How It Works</CardTitle>
+                </div>
+                <CardDescription className="text-base text-slate-600 ml-13">
+                  Simple three-step process to unlock insights from your transaction data
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4">
-                    <Upload className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <h3 className="font-semibold">1. Upload Data</h3>
-                    <p className="text-sm text-muted-foreground font-light">Upload your CSV transaction data</p>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="text-center p-6 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200">
+                    <div className="w-12 h-12 rounded-xl bg-[#4169E1] bg-opacity-10 flex items-center justify-center mx-auto mb-4">
+                      <Upload className="h-6 w-6 text-[#4169E1]" />
+                    </div>
+                    <h3 className="font-semibold text-slate-800 text-lg mb-2">1. Upload Data</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      Upload your CSV transaction data with items and purchase records
+                    </p>
                   </div>
-                  <div className="text-center p-4">
-                    <BarChart3 className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <h3 className="font-semibold">2. Analyze</h3>
-                    <p className="text-sm text-muted-foreground font-light">FP-Growth algorithm finds patterns</p>
+                  <div className="text-center p-6 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200">
+                    <div className="w-12 h-12 rounded-xl bg-[#4169E1] bg-opacity-10 flex items-center justify-center mx-auto mb-4">
+                      <BarChart3 className="h-6 w-6 text-[#4169E1]" />
+                    </div>
+                    <h3 className="font-semibold text-slate-800 text-lg mb-2">2. Analyze</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      Advanced FP-Growth algorithm discovers purchase patterns
+                    </p>
                   </div>
-                  <div className="text-center p-4">
-                    <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <h3 className="font-semibold">3. Get Insights</h3>
-                    <p className="text-sm text-muted-foreground font-light">View recommendations & visualizations</p>
+                  <div className="text-center p-6 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200">
+                    <div className="w-12 h-12 rounded-xl bg-[#4169E1] bg-opacity-10 flex items-center justify-center mx-auto mb-4">
+                      <TrendingUp className="h-6 w-6 text-[#4169E1]" />
+                    </div>
+                    <h3 className="font-semibold text-slate-800 text-lg mb-2">3. Get Insights</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      View actionable recommendations and interactive visualizations
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
         ) : (
-          <Tabs defaultValue="results" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="results" className="font-medium">Analysis Results</TabsTrigger>
-              <TabsTrigger value="visualizations" className="font-medium">Visualizations</TabsTrigger>
-              <TabsTrigger value="recommendations" className="font-medium">Recommendations</TabsTrigger>
-            </TabsList>
+          <div className="bg-white rounded-2xl shadow-lg border-0 p-2">
+            <Tabs defaultValue="results" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 bg-slate-100 p-1 rounded-xl">
+                <TabsTrigger
+                  value="results"
+                  className="font-semibold text-slate-600 data-[state=active]:bg-white data-[state=active]:text-[#4169E1] data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
+                >
+                  Analysis Results
+                </TabsTrigger>
+                <TabsTrigger
+                  value="visualizations"
+                  className="font-semibold text-slate-600 data-[state=active]:bg-white data-[state=active]:text-[#4169E1] data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
+                >
+                  Visualizations
+                </TabsTrigger>
+                <TabsTrigger
+                  value="recommendations"
+                  className="font-semibold text-slate-600 data-[state=active]:bg-white data-[state=active]:text-[#4169E1] data-[state=active]:shadow-sm rounded-lg transition-all duration-200"
+                >
+                  Recommendations
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="results" className="mt-6">
-              <AnalysisResults data={analysisData} />
-            </TabsContent>
+              <TabsContent value="results" className="mt-8">
+                <div className="px-6">
+                  <button
+                    onClick={handleBackToUpload}
+                    className="flex items-center text-sm font-medium text-[#4169E1] hover:text-[#3a5bc7] transition-colors mb-6"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to upload
+                  </button>
+                </div>
+                <AnalysisResults data={analysisData} />
+              </TabsContent>
 
-            <TabsContent value="visualizations" className="mt-6">
-              <Visualizations data={analysisData} />
-            </TabsContent>
+              <TabsContent value="visualizations" className="mt-8">
+                <div className="px-6">
+                  <button
+                    onClick={handleBackToUpload}
+                    className="flex items-center text-sm font-medium text-[#4169E1] hover:text-[#3a5bc7] transition-colors mb-6"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to upload
+                  </button>
+                </div>
+                <Visualizations data={analysisData} />
+              </TabsContent>
 
-            <TabsContent value="recommendations" className="mt-6">
-              <Recommendations data={analysisData} />
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="recommendations" className="mt-8">
+                <Recommendations data={analysisData} onBack={handleBackToUpload} />
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
       </div>
     </div>
